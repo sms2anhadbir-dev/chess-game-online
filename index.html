@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login - Chess</title>
+<style>
+body {
+  background:#111;
+  color:white;
+  font-family:Arial;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+
+input, button {
+  padding:10px;
+  margin:5px;
+  border-radius:8px;
+  border:none;
+}
+
+button { background:#333; color:white; cursor:pointer; }
+</style>
+</head>
+
+<body>
+
+<h2>Chess Login</h2>
+
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+
+<button onclick="login()">Login</button>
+
+<script>
+function login() {
+  const username = document.getElementById("user").value;
+  const password = document.getElementById("pass").value;
+
+  if (!username || !password) {
+    alert("Fill in all fields");
+    return;
+  }
+
+  // ⚠️ DEMO AUTH (replace with server later)
+  const token = crypto.randomUUID();
+
+  const packageData = {
+    username,
+    token,
+    time: Date.now()
+  };
+
+  // store "package"
+  localStorage.setItem("chess_auth", JSON.stringify(packageData));
+
+  // redirect
+  window.location.href = "chess.html";
+}
+</script>
+
+</body>
+</html>
