@@ -1,27 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Login - Chess</title>
+<meta charset="utf-8">
+<title>Login</title>
+
 <style>
 body {
   background:#111;
   color:white;
   font-family:Arial;
   display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
   height:100vh;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
 }
 
-input, button {
+input,button {
   padding:10px;
   margin:5px;
-  border-radius:8px;
-  border:none;
 }
-
-button { background:#333; color:white; cursor:pointer; }
 </style>
 </head>
 
@@ -29,34 +27,28 @@ button { background:#333; color:white; cursor:pointer; }
 
 <h2>Chess Login</h2>
 
-<input id="user" placeholder="Username">
-<input id="pass" type="password" placeholder="Password">
-
+<input id="u" placeholder="Username">
+<input id="p" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 
 <script>
 function login() {
-  const username = document.getElementById("user").value;
-  const password = document.getElementById("pass").value;
+  const username = document.getElementById("u").value;
+  const password = document.getElementById("p").value;
 
-  if (!username || !password) {
-    alert("Fill in all fields");
+  if(!username || !password){
+    alert("Fill all fields");
     return;
   }
 
-  // ⚠️ DEMO AUTH (replace with server later)
-  const token = crypto.randomUUID();
-
-  const packageData = {
+  const session = {
     username,
-    token,
+    token: crypto.randomUUID(),
     time: Date.now()
   };
 
-  // store "package"
-  localStorage.setItem("chess_auth", JSON.stringify(packageData));
+  localStorage.setItem("chess_auth", JSON.stringify(session));
 
-  // redirect
   window.location.href = "chess.html";
 }
 </script>
