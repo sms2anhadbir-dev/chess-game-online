@@ -1,30 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+
+<title>Chess Game</title>
+
+<!-- ✅ FIX: SAFE CDN (NO Chess undefined error) -->
+<script src="https://cdn.jsdelivr.net/npm/chess.js@0.13.4/chess.min.js"></script>
+
+<style>
+body {
+  background:#111;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
+
+#board {
+  display:grid;
+  grid-template-columns:repeat(8,70px);
+  grid-template-rows:repeat(8,70px);
+  margin:auto;
+  width:560px;
+  border:3px solid white;
+}
+
+.square {
+  width:70px;
+  height:70px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:38px;
+  position:relative;
+}
+
+.white { background:#f0d9b5; }
+.black { background:#b58863; }
+
+.marker {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-weight:bold;
+  font-size:20px;
+  pointer-events:none;
+}
+
+.move { color:lime; }
+.danger { color:red; }
+.kill { color:gold; }
+</style>
+</head>
+
+<body>
+
+<h2 id="user"></h2>
+<div id="board"></div>
+
 <script>
+/* ---------------- AUTH CHECK ---------------- */
 const auth = JSON.parse(localStorage.getItem("chess_auth"));
 
-if (!auth || !auth.token) {
-  alert("Not authenticated");
+if(!auth || !auth.token){
+  alert("Not logged in");
   window.location.href = "index.html";
 }
 
+document.getElementById("user").innerText =
+"Player: " + auth.username;
+
+/* ---------------- SAFETY INIT ---------------- */
+if (typeof Chess === "undefined") {
+  alert("Chess engine failed to load");
+}
+
+/* ---------------- GAME ---------------- */
 const game = new Chess();
-const board = document.getElementById("board");
+const boardEl = document.getElementById("board");
 
 let selected = null;
-let showLegend = false;
 
-// ♟ PIECES
+/* PIECES */
 const pieces = {
  p:"♟",r:"♜",n:"♞",b:"♝",q:"♛",k:"♚",
  P:"♙",R:"♖",N:"♘",B:"♗",Q:"♕",K:"♔"
 };
 
-// ---------------- RENDER ----------------
+/* ---------------- RENDER ---------------- */
 function render() {
-  board.innerHTML = "";
+  boardEl.innerHTML = "";
   const b = game.board();
 
-  for (let r=0;r<8;r++) {
-    for (let c=0;c<8;c++) {
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
       const sq = document.createElement("div");
       const name = String.fromCharCode(97+c)+(8-r);
 
@@ -32,102 +102,65 @@ function render() {
       sq.className = "square " + ((r+c)%2?"black":"white");
 
       const p = b[r][c];
-      if (p) {
+      if(p){
         sq.textContent = p.color==="w"
           ? pieces[p.type.toUpperCase()]
           : pieces[p.type];
       }
 
-      sq.onclick = () => click(name);
-      board.appendChild(sq);
+      sq.onclick = ()=>click(name);
+      boardEl.appendChild(sq);
     }
   }
 }
 
-// ---------------- MOVE SAFETY CHECK ----------------
-function isDanger(move) {
-  const sim = new Chess(game.fen());
-  sim.move(move);
-
-  const kingSquare = findKingSquare(sim);
-
-  return sim.moves({ verbose:true }).some(m => m.to === kingSquare);
-}
-
-// find king position
-function findKingSquare(g) {
-  const b = g.board();
-  for (let r=0;r<8;r++) {
-    for (let c=0;c<8;c++) {
-      const p = b[r][c];
-      if (p && p.type==="k" && p.color===g.turn()) {
-        return String.fromCharCode(97+c)+(8-r);
-      }
-    }
-  }
-  return null;
-}
-
-// ---------------- CLICK ----------------
-async function click(sq) {
-  if (!selected) {
+/* ---------------- MOVE LOGIC ---------------- */
+function click(sq){
+  if(!selected){
     selected = sq;
     highlight(sq);
     return;
   }
 
-  const move = {from:selected, to:sq, promotion:"q"};
+  const move = {from:selected,to:sq,promotion:"q"};
 
   game.move(move);
-  selected = null;
 
+  selected = null;
+  clear();
   render();
 }
 
-// ---------------- HIGHLIGHT SYSTEM ----------------
-function highlight(sq) {
+/* ---------------- HIGHLIGHT O/X/K ---------------- */
+function highlight(sq){
   clear();
 
-  const moves = game.moves({square:sq, verbose:true});
+  const moves = game.moves({square:sq,verbose:true});
 
-  moves.forEach(m => {
+  moves.forEach(m=>{
     const el = [...document.querySelectorAll(".square")]
-      .find(x => x.dataset.square === m.to);
+      .find(x=>x.dataset.square===m.to);
 
-    if (!el) return;
-
-    const dangerous = isDanger({from:sq,to:m.to});
-    const capture = m.captured;
+    if(!el) return;
 
     const mark = document.createElement("div");
     mark.className =
-      "marker " +
-      (capture ? "kill" : dangerous ? "danger" : "move");
+      "marker " + (m.captured ? "kill" : "move");
 
-    mark.textContent =
-      capture ? "K" : dangerous ? "X" : "O";
+    mark.textContent = m.captured ? "K" : "O";
 
     el.appendChild(mark);
   });
 }
 
-// ---------------- CLEAR ----------------
-function clear() {
-  document.querySelectorAll(".marker").forEach(m => m.remove());
+/* ---------------- CLEAR ---------------- */
+function clear(){
+  document.querySelectorAll(".marker").forEach(m=>m.remove());
 }
 
-// ---------------- LEGEND TOGGLE (KEY = L) ----------------
-document.addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "l") {
-    showLegend = !showLegend;
-    alert(
-      "Legend:\n" +
-      "O = Safe move\n" +
-      "X = Dangerous move\n" +
-      "K = Capture available"
-    );
-  }
-});
-
+/* ---------------- START ---------------- */
 render();
 </script>
+
+</body>
+</html>
