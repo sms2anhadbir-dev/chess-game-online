@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Ultimate Chess</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<style>
+body {
+  margin:0;
+  background:#111;
+  color:white;
+  font-family:Arial;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+#menu { display:flex; gap:10px; margin:10px; flex-wrap:wrap; }
+
+button {
+  padding:10px;
+  border:0;
+  border-radius:8px;
+  background:#333;
+  color:white;
+  cursor:pointer;
+}
+
+#board {
+  display:grid;
+  grid-template-columns:repeat(8,80px);
+  grid-template-rows:repeat(8,80px);
+  border:3px solid white;
+}
+
+.square {
+  width:80px;
+  height:80px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:40px;
+  position:relative;
+}
+
+.white { background:#f0d9b5; }
+.black { background:#b58863; }
+
+.marker {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-weight:bold;
+  font-size:22px;
+  pointer-events:none;
+}
+
+.move { color:lime; }
+.danger { color:red; }
+.kill { color:gold; }
+
+.selected { outline:3px solid yellow; }
+</style>
+</head>
+
+<body>
+
+<h2>Ultimate Chess</h2>
+
+<div id="menu">
+<button onclick="setMode('local')">Local</button>
+<button onclick="setMode('ai')">AI</button>
+<button onclick="setMode('online')">Online</button>
+</div>
+
+<div id="board"></div>
+
+<script>
+const game = new Chess();
+const boardEl = document.getElementById("board");
+
+let selected = null;
+let mode = "local";
+let socket = null;
+
+// CHANGE THIS after deploy
+const SERVER_URL = "http://localhost:3000";
+
+const pieces = {
+ p:"♟",r:"♜",n:"♞",b:"♝",q:"♛",k:"♚",
+ P:"♙",R:"♖",N:"♘",B:"♗",Q:"♕",K:"♔"
+};
+
+function render(){
+ boardEl.innerHTML="";
+ const b=game.board();
+
+ for(let r=0;r<8;r++){
+  for(let c=0;c<8;c++){
+   const sq=document.createElement("div");
+   const name=String.fromCharCode(97+c)+(8-r);
+
+   sq.dataset.square=name;
+   sq.className="square "+((r+c)%2?"black":"white");
+
+   const p=b[r][c];
+   if(p) sq.textContent = p.color==="w"
+     ? pieces[p.type.toUpperCase()]
+     : pieces[p.type];
+
+   sq.onclick=()=>click(name);
+   boardEl.appendChild(sq);
+  }
+ }
+}
+
+function isDanger(move){
+ const sim=new Chess(game.fen());
+ sim.move(move);
+ return sim.moves({verbose:true}).some(m=>m.to===move.to);
+}
+
+function popup(){
+ return new Promise(res=>{
+  const o=document.createElement("div");
+  Object.assign(o.style,{
+   position:"fixed",inset:0,
+   background:"rgba(0,0,0,.6)",
+   display:"flex",
+   alignItems:"center",
+   justifyContent:"center"
+  });
+
+  const box=document.createElement("div");
+  Object.assign(box.style,{
+   background:"#222",
+   padding:"20px",
+   borderRadius:"10px",
+   textAlign:"center"
+  });
+
+  box.innerHTML="<h3>Danger Move</h3>";
+
+  const y=document.createElement("button");
+  const n=document.createElement("button");
+
+  y.textContent="Yes";
+  n.textContent="No";
+
+  y.onclick=()=>{o.remove();res(true)};
+  n.onclick=()=>{o.remove();res(false)};
+
+  box.appendChild(y);
+  box.appendChild(n);
+  o.appendChild(box);
+  document.body.appendChild(o);
+ });
+}
+
+async function click(sq){
+ if(!selected){
+  selected=sq;
+  return;
+ }
+
+ const move={from:selected,to:sq,promotion:"q"};
+
+ if(isDanger(move)){
+  if(!await popup()){
+   selected=null;
+   return;
+  }
+ }
+
+ game.move(move);
+ selected=null;
+ render();
+
+ if(mode==="online") send(move);
+}
+
+function setMode(m){
+ mode=m;
+ game.reset();
+ render();
+
+ if(mode==="online") connect();
+}
+
+function connect(){
+ socket = io(SERVER_URL);
+
+ socket.on("move", m=>{
+  game.move(m);
+  render();
+ });
+}
+
+function send(m){
+ if(socket) socket.emit("move",m);
+}
+
+render();
+</script>
+
+</body>
+</html>
